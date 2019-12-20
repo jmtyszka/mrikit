@@ -7,10 +7,6 @@ Authors
 ----
 Mike Tyszka, Caltech Brain Imaging Center
 
-Dates
-----
-2018-10-22 JMT From scratch
-
 MIT License
 
 Copyright (c) 2018 Mike Tyszka
