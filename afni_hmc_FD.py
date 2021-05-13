@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Compute framewise displacement (FD) statistics from SPM realignment parameters
+Compute framewise displacement (FD) statistics from AFNI head motion correction parameters (*.1D file)
 
 AUTHOR
 ----
@@ -12,7 +12,7 @@ Caltech Brain Imaging Center
 
 MIT License
 
-Copyright (c) 2019 Mike Tyszka
+Copyright (c) 2021 Mike Tyszka
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -45,21 +45,36 @@ import numpy as np
 def main():
 
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Compute FD statistics from SPM realignment parameters")
-    parser.add_argument('-i', '--infile', required=True, help="SPM six-column realignment parameter file")
+    parser = argparse.ArgumentParser(description="Compute FD statistics from AFNI head motion correction parameters")
+    parser.add_argument('-i', '--infile', required=True, help="AFNI 3d six-column realignment parameter file")
 
     # Parse command line arguments
     args = parser.parse_args()
 
-    # Read SPM realign parameters
-    # Expects 6-column, space-separated values, one row per TR
-    # Column order: dx, dy, dz, rx, ry, rz
-    # Displacements in mm, rotations in radians
+    # AFNI .1D file format from 3dvolreg help output:
+    # -1Dfile ename   Save the motion parameters ONLY in file 'ename'.
+    #                 The output is in 6 ASCII formatted columns:
+    #                     roll pitch yaw dS  dL  dP
+    #
+    # Units : degrees CCW for rotation, mm for displacement
+    #
+    # NOTE: roll, pitch, yaw are defined relative to a heading in z ("ship" sailing along magnet bore)
+    #        ** roll  = shaking head 'no' left-right
+    #        ** pitch = nodding head 'yes' up-down
+    #        ** yaw   = wobbling head sideways (ear toward shoulder)
+    #
+    # So for RAS orientation, the file columns map to:
+    # roll, pitch, yaw, dS, dL, dP : Rz, Rx, Ry, dz, dx, dy
 
     p = pd.read_csv(args.infile,
                    header=None,
                    delim_whitespace=True,
-                   names=["dx_mm", "dy_mm", "dz_mm", "rx_rad", "ry_rad", "rz_rad"])
+                   names=["rz_deg", "rx_deg", "ry_deg", "dz_mm", "dx_mm", "dy_mm"])
+
+    # Convert degrees to radians
+    p["rx_rad"] = p["rx_deg"] * np.pi / 180.0
+    p["ry_rad"] = p["ry_deg"] * np.pi / 180.0
+    p["rz_rad"] = p["rz_deg"] * np.pi / 180.0
 
     # Use the FD definition from Power JD et al Neuroimage 2012;59:2142
     # http://dx.doi.org/10.1016/j.neuroimage.2011.10.018
@@ -106,9 +121,9 @@ def main():
     p["FD_mm"] = FD
 
     # Save dataframe to CSV file
-    outfile = args.infile.replace('.txt', '_FD.csv')
-    print('* Saving results to {}'.format(os.path.basename(outfile)))
-    p.to_csv(outfile, header=True, float_format='%0.6f', index=False)
+    outfile = args.infile.replace('.1D', '_FD.csv')
+    print('Saving results to {}'.format(os.path.basename(outfile)))
+    p.to_csv(outfile, header=True, float_format='%0.3f', index=False)
 
 
 # This is the standard boilerplate that calls the main() function.
