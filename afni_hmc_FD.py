@@ -69,12 +69,17 @@ def main():
     p = pd.read_csv(args.infile,
                    header=None,
                    delim_whitespace=True,
-                   names=["rz_deg", "rx_deg", "ry_deg", "dz_mm", "dx_mm", "dy_mm"])
+                   names=["rz_deg", "rx_deg", "ry_deg", "tz_mm", "tx_mm", "ty_mm"])
+
+    # Extract translations
+    tx_mm = p["tx_mm"]
+    ty_mm = p["ty_mm"]
+    tz_mm = p["tz_mm"]
 
     # Convert degrees to radians
-    p["rx_rad"] = p["rx_deg"] * np.pi / 180.0
-    p["ry_rad"] = p["ry_deg"] * np.pi / 180.0
-    p["rz_rad"] = p["rz_deg"] * np.pi / 180.0
+    rx_rad = p["rx_deg"] * np.pi / 180.0
+    ry_rad = p["ry_deg"] * np.pi / 180.0
+    rz_rad = p["rz_deg"] * np.pi / 180.0
 
     # Use the FD definition from Power JD et al Neuroimage 2012;59:2142
     # http://dx.doi.org/10.1016/j.neuroimage.2011.10.018
@@ -90,20 +95,18 @@ def main():
     # of a sphere of radius 50 mm, which is approximately the mean distance from the cerebral cortex to the center of
     # the head.
 
-    # Absolute backward finite differences for displacements
-    ddx = np.abs(np.diff(p["dx_mm"], prepend=p["dx_mm"][0]))
-    ddy = np.abs(np.diff(p["dy_mm"], prepend=p["dy_mm"][0]))
-    ddz = np.abs(np.diff(p["dz_mm"], prepend=p["dz_mm"][0]))
+    # Backward differences (forward difference array with leading 0)
+    drx = np.insert(np.diff(rx_rad), 0, 0)
+    dry = np.insert(np.diff(ry_rad), 0, 0)
+    drz = np.insert(np.diff(rz_rad), 0, 0)
+    dtx = np.insert(np.diff(tx_mm), 0, 0)
+    dty = np.insert(np.diff(ty_mm), 0, 0)
+    dtz = np.insert(np.diff(tz_mm), 0, 0)
 
-    # Absolute scaled backward finite differences for rotations
+    # Total framewise displacement (Power 2012)
     r_sphere = 50.0  # mm
-    drx = r_sphere * np.abs(np.diff(p["rx_rad"], prepend=p["rx_rad"][0]))
-    dry = r_sphere * np.abs(np.diff(p["ry_rad"], prepend=p["ry_rad"][0]))
-    drz = r_sphere * np.abs(np.diff(p["rz_rad"], prepend=p["rz_rad"][0]))
-
-    # Framewise displacement timeseries
-    # Map rotations to displacement on surface of 50 mm radius sphere (l = r theta)
-    FD = ddx + ddy + ddz + drx + dry + drz
+    FD = (np.abs(dtx) + np.abs(dty) + np.abs(dtz) +
+          np.abs(r_sphere * drx) + np.abs(r_sphere * dry) + np.abs(r_sphere * drz))
 
     # Report FD stats in mm
     print('')
@@ -114,10 +117,7 @@ def main():
     print('  Min    : {:0.3f} mm'.format(np.min(FD)))
     print('  Max    : {:0.3f} mm'.format(np.max(FD)))
 
-    # Save finite differences and FD to dataframe
-    p["drx_mm"] = drx
-    p["dry_mm"] = dry
-    p["drz_mm"] = dry
+    # Add FD to dataframe
     p["FD_mm"] = FD
 
     # Save dataframe to CSV file
