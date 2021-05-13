@@ -123,7 +123,7 @@ def main():
     # Save dataframe to CSV file
     outfile = args.infile.replace('.1D', '_FD.csv')
     print('Saving results to {}'.format(os.path.basename(outfile)))
-    p.to_csv(outfile, header=True, float_format='%0.3f', index=False)
+    p.to_csv(outfile, header=True, float_format='%0.6f', index=False)
 
 
 # This is the standard boilerplate that calls the main() function.
