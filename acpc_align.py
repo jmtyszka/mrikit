@@ -18,6 +18,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='AC-PC align structural image')
     parser.add_argument('-i', '--infile', required=True, help='Unaligned structural image')
+    parser.add_argument('-r', '--resolution', type=float, default=1.0, help='Output resolution (mm)')
     args = parser.parse_args()
 
     anat_fname = args.infile
@@ -49,6 +50,8 @@ def main():
         moving=anat_ai,
         type_of_transform='Rigid'
     )
+
+    # TODO: Implement arbitrary output spatial resolution from CLI
 
     # Save AC-PC aligned image to same folder as original anatomic image
     anat_acpc_fname = anat_fname.replace('.nii.gz', '_acpc.nii.gz')
